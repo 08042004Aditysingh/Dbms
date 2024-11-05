@@ -1,0 +1,42 @@
+create database lib1;
+use lib1;
+
+CREATE TABLE IF NOT EXISTS areas (
+    radius INT,
+    area DECIMAL(10, 2)
+);
+
+-- Step 2: Define the stored procedure to calculate and insert circle areas
+DELIMITER //
+
+CREATE PROCEDURE Calculate_Circle_Areas()
+BEGIN
+    DECLARE v_radius INT DEFAULT 5;
+    DECLARE v_area DECIMAL(10, 2);
+
+    -- Loop to calculate area for radius values from 5 to 9
+    loop_label: LOOP
+        -- Calculate area of the circle
+        SET v_area = 3.14159 * v_radius * v_radius;
+
+        -- Insert radius and calculated area into areas table
+        INSERT INTO areas (radius, area) VALUES (v_radius, v_area);
+
+        -- Increment radius
+        SET v_radius = v_radius + 1;
+
+        -- Exit the loop when radius exceeds 9
+        IF v_radius > 9 THEN
+            LEAVE loop_label;
+        END IF;
+    END LOOP loop_label;
+
+    -- Commit the transaction to save changes
+    COMMIT;
+END //
+
+DELIMITER ;
+
+-- Step 3: Execute the stored procedure
+CALL Calculate_Circle_Areas();
+select * from areas;

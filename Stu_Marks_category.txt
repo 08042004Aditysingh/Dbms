@@ -1,0 +1,86 @@
+-- Step 1: Create the Database and Use It
+CREATE DATABASE Score;
+USE Score;
+
+-- Step 2: Create Tables
+CREATE TABLE stud_marks (
+    name VARCHAR(20),
+    total_marks INT(5)
+);
+
+CREATE TABLE Result (
+    roll_no INT(3) PRIMARY KEY,
+    name VARCHAR(20),
+    class VARCHAR(20)
+);
+
+-- Step 3: Insert Data into stud_marks
+INSERT INTO stud_marks VALUES ('Suresh', 995);
+INSERT INTO stud_marks VALUES ('Harish', 865);
+INSERT INTO stud_marks VALUES ('Samart', 920);
+INSERT INTO stud_marks VALUES ('Mohan', 1000);
+INSERT INTO stud_marks VALUES ('Soham', 745);
+
+-- Step 4: View Data in stud_marks
+SELECT * FROM stud_marks;
+
+-- Step 5: Insert Data into Result
+INSERT INTO Result (roll_no, name) VALUES (1, 'Suresh');
+INSERT INTO Result (roll_no, name) VALUES (2, 'Harish');
+INSERT INTO Result (roll_no, name) VALUES (3, 'Samart');
+INSERT INTO Result (roll_no, name) VALUES (4, 'Mohan');
+INSERT INTO Result (roll_no, name) VALUES (5, 'Soham');
+
+-- Step 6: View Data in Result
+SELECT * FROM Result;
+
+-- Step 7: Create Procedure for Grade Assignment
+DELIMITER //
+
+CREATE PROCEDURE proc_Grade(IN r INT(2), OUT grade CHAR(25))
+BEGIN
+    DECLARE m INT(4);
+
+    SELECT total_marks INTO m FROM stud_marks WHERE name = (SELECT name FROM Result WHERE roll_no = r);
+
+    IF m >= 990 AND m <= 1500 THEN
+        SELECT 'Distinction' INTO grade;
+        UPDATE Result SET class = 'Distinction' WHERE roll_no = r;
+    ELSEIF m >= 900 AND m <= 989 THEN
+        SELECT 'FirstClass' INTO grade;
+        UPDATE Result SET class = 'FirstClass' WHERE roll_no = r;
+    ELSEIF m >= 825 AND m <= 899 THEN
+        SELECT 'SecondClass' INTO grade;
+        UPDATE Result SET class = 'SecondClass' WHERE roll_no = r;
+    ELSE
+        SELECT '--' INTO grade;
+        UPDATE Result SET class = '--' WHERE roll_no = r;
+    END IF;
+END //
+
+DELIMITER ;
+
+-- Step 8: Create Function to Get Grade
+
+DELIMITER //
+
+CREATE FUNCTION func_Grade(r INT(2)) 
+RETURNS VARCHAR(25) 
+DETERMINISTIC
+BEGIN
+    DECLARE grade VARCHAR(25);
+    CALL proc_Grade(r, grade);
+    RETURN grade;
+END //
+
+DELIMITER ;
+
+-- Step 9: Test the Function with Various Roll Numbers
+SELECT func_Grade(1);
+SELECT func_Grade(2);
+SELECT func_Grade(3);
+SELECT func_Grade(4);
+SELECT func_Grade(5);
+
+-- Step 10: View Updated Data in Result Table
+SELECT * FROM Result;

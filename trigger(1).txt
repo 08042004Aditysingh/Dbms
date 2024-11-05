@@ -1,0 +1,77 @@
+-- Step 1: Create the Library table (for demonstration)
+CREATE TABLE Library (
+    book_id INT PRIMARY KEY,
+    title VARCHAR(255),
+    author VARCHAR(255)
+);
+
+-- Step 2: Insert sample data into Library
+INSERT INTO Library (book_id, title, author)
+VALUES 
+    (1, 'The Great Gatsby', 'F. Scott Fitzgerald'),
+    (2, 'To Kill a Mockingbird', 'Harper Lee'),
+    (3, '1984', 'George Orwell');
+
+-- Step 3: Create the Library_Audit table to store audit records
+CREATE TABLE Library_Audit (
+    audit_id INT AUTO_INCREMENT PRIMARY KEY,
+    book_id INT,
+    title VARCHAR(255),
+    author VARCHAR(255),
+    action_type ENUM('BEFORE UPDATE', 'AFTER UPDATE', 'BEFORE DELETE', 'AFTER DELETE'),
+    action_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Set delimiter for trigger creation
+DELIMITER //
+
+-- Step 4: Create the BEFORE UPDATE trigger on Library table
+CREATE TRIGGER before_library_update
+BEFORE UPDATE ON Library
+FOR EACH ROW
+BEGIN
+    INSERT INTO Library_Audit (book_id, title, author, action_type)
+    VALUES (OLD.book_id, OLD.title, OLD.author, 'BEFORE UPDATE');
+END //
+
+-- Step 5: Create the AFTER UPDATE trigger on Library table
+CREATE TRIGGER after_library_update
+AFTER UPDATE ON Library
+FOR EACH ROW
+BEGIN
+    INSERT INTO Library_Audit (book_id, title, author, action_type)
+    VALUES (OLD.book_id, OLD.title, OLD.author, 'AFTER UPDATE');
+END //
+
+-- Step 6: Create the BEFORE DELETE trigger on Library table
+CREATE TRIGGER before_library_delete
+BEFORE DELETE ON Library
+FOR EACH ROW
+BEGIN
+    INSERT INTO Library_Audit (book_id, title, author, action_type)
+    VALUES (OLD.book_id, OLD.title, OLD.author, 'BEFORE DELETE');
+END //
+
+-- Step 7: Create the AFTER DELETE trigger on Library table
+CREATE TRIGGER after_library_delete
+AFTER DELETE ON Library
+FOR EACH ROW
+BEGIN
+    INSERT INTO Library_Audit (book_id, title, author, action_type)
+    VALUES (OLD.book_id, OLD.title, OLD.author, 'AFTER DELETE');
+END //
+
+-- Reset delimiter back to default
+DELIMITER ;
+
+-- Step 8: Perform an UPDATE operation to trigger both BEFORE and AFTER update triggers
+UPDATE Library
+SET author = 'Fitzgerald'
+WHERE book_id = 1;
+
+-- Step 9: Perform a DELETE operation to trigger both BEFORE and AFTER delete triggers
+DELETE FROM Library
+WHERE book_id = 2;
+
+-- Step 10: Check the contents of the Library_Audit table to verify all triggers
+SELECT * FROM Library_Audit;

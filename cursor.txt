@@ -1,0 +1,97 @@
+-- Step 1: Create the Tables
+
+-- Drop tables if they already exist to avoid conflicts
+DROP TABLE IF EXISTS O_RollCall;
+DROP TABLE IF EXISTS N_RollCall;
+
+-- Create the O_RollCall table (existing data table)
+CREATE TABLE O_RollCall (
+    roll_no INT,
+    name VARCHAR(50),
+    attendance_date DATE,
+    status VARCHAR(10),
+    PRIMARY KEY (roll_no, attendance_date) -- Composite primary key
+);
+
+-- Create the N_RollCall table (new data table to be merged)
+CREATE TABLE N_RollCall (
+    roll_no INT,
+    name VARCHAR(50),
+    attendance_date DATE,
+    status VARCHAR(10)
+);
+
+-- Step 2: Insert Sample Data
+
+-- Inserting Data into O_RollCall
+INSERT INTO O_RollCall (roll_no, name, attendance_date, status)
+VALUES 
+    (1, 'John Doe', '2024-10-01', 'Present'),
+    (2, 'Jane Smith', '2024-10-01', 'Absent'),
+    (3, 'Jim Brown', '2024-10-01', 'Present');
+
+-- Inserting Data into N_RollCall
+INSERT INTO N_RollCall (roll_no, name, attendance_date, status)
+VALUES 
+    (1, 'John Doe', '2024-10-01', 'Present'),  -- Duplicate, should be skipped
+    (2, 'Jane Smith', '2024-10-02', 'Present'), -- New entry, should be added
+    (4, 'Sam Wilson', '2024-10-01', 'Absent');  -- New entry, should be added
+
+-- Step 3: Define the Merge Procedure with a Parameterized Cursor
+
+DELIMITER //
+
+CREATE PROCEDURE MergeRollCallData(IN start_date DATE, IN end_date DATE)
+BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE v_roll_no INT;
+    DECLARE v_name VARCHAR(50);
+    DECLARE v_attendance_date DATE;
+    DECLARE v_status VARCHAR(10);
+
+    -- Declare a parameterized cursor to select rows from N_RollCall within a date range
+    DECLARE cur CURSOR FOR 
+        SELECT roll_no, name, attendance_date, status 
+        FROM N_RollCall
+        WHERE attendance_date BETWEEN start_date AND end_date;
+
+    -- Declare a handler for the end of the cursor
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    -- Open the cursor
+    OPEN cur;
+
+    -- Loop through each row from the cursor
+    read_loop: LOOP
+        -- Fetch each row into variables
+        FETCH cur INTO v_roll_no, v_name, v_attendance_date, v_status;
+
+        -- If there are no more rows, exit the loop
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+
+        -- Insert into O_RollCall only if the record does not already exist
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM O_RollCall 
+            WHERE roll_no = v_roll_no 
+              AND attendance_date = v_attendance_date
+        ) THEN
+            INSERT INTO O_RollCall (roll_no, name, attendance_date, status)
+            VALUES (v_roll_no, v_name, v_attendance_date, v_status);
+        END IF;
+    END LOOP;
+
+    -- Close the cursor
+    CLOSE cur;
+END //
+
+DELIMITER ;
+
+-- Step 4: Execute the Merge Procedure with a specified date range
+
+CALL MergeRollCallData('2024-10-01', '2024-10-02');
+
+-- Step 5: Check Final Data in O_RollCall
+SELECT * FROM O_RollCall;
